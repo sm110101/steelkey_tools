@@ -25,15 +25,32 @@ class DebankAPI:
             'id': wallet_address
         }
         # Call API
-        response = requests.get(url, headers=self.headers, params=params)
-        data = response.json()
-        # Extract chain IDs
-        chain_ids = [chain['id'] for chain in data]
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            data = response.json()
+            # Extract chain IDs
+            chain_ids = [chain['id'] for chain in data]
+            return chain_ids
+        except 
+
+        
         return chain_ids
 
 
-    def fetch_chain_balances(self, chain_id, wallet_address):
+    def fetch_chain_balances(self, wallet_address):
         url = f"{self.base_url}/v1/user/chain_balance"
+        # Fetch chain IDs
+        chain_ids = self.fetch_interacted_chains(wallet_address)
+        for chain_id in chain_ids:
+            params = {
+                'chain_id': chain_id,
+                'id': wallet_address
+            }
+            # Call API
+            response = requests.get(url, headers=self.headers, params=params)
+            data = response.json()
+            print(data)
+
         # Call parameters
         params = {
             'chain_id': chain_id
