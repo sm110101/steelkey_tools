@@ -11,7 +11,6 @@ import numpy as np
 
 """
 TO DO
-- Debug fetch_interacted_chains() JSON parsing issue
 - Test with different wallet addresses
 """
 
@@ -51,7 +50,6 @@ class DebankAPI:
         try:
             response = requests.get(url, headers=self.headers, params=params)
             data = response.json()
-            print("Response Structure: ", data)
 
             # Extract chain ID and community ID with validation
             chains = []
