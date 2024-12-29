@@ -8,11 +8,28 @@ import json
 # Data
 import pandas as pd
 import numpy as np
+# Timing decorator
+from functools import wraps
+# Pretty print for temp dev tooling
+from pprint import pprint
+
 
 """
 TO DO
 - Test with different wallet addresses
 """
+
+# Function execution timer
+def timing_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"{func.__name__}: {execution_time:.2f} seconds\n")
+        return result
+    return wrapper
 
 
 class DebankAPI:
@@ -32,6 +49,7 @@ class DebankAPI:
             'AccessKey': self.api_key
         }
 
+    @timing_decorator
     def fetch_interacted_chains(self, wallet_address):
         """
         Fetches list of blockchain networks that a wallet has interacted with.
@@ -56,9 +74,9 @@ class DebankAPI:
             for chain in data:
                 chain_name = chain.get('name', None) # Default to None if not present
                 chain_id = chain.get('id', None) # Default to None if not present
-                community_id = chain.get('community_id', None) # Default to None if not present
+                chain_community_id = chain.get('community_id', None) # Default to None if not present
                 
-                chains.append((chain_name, chain_id, community_id))
+                chains.append((chain_name, chain_id, chain_community_id))
 
 
             return chains
@@ -66,14 +84,72 @@ class DebankAPI:
             print(f"Error fetching interacted chains for {wallet_address}: {e}")
             return []
         
+    @timing_decorator
+    def fetch_chain_balances(self, wallet_address, dataframe = False):
+        """
+        Fetches the USD balance of a given wallet by chain_id
+        Args: 
+            wallet_address (str): user's wallet address.
+        Returns:
+            dictionary: a dictionary of pairs representing chain balances {chain: $balance}
+         """
+        url = f"{self.base_url}/v1/user/chain_balance"
+        # Get interacted chains
+        print("fetching interacted chains...")
+        chains_tuple = self.fetch_interacted_chains(wallet_address)
+
+        # Initialize empty dictionary to store balances
+        chain_balances = {}
+        # unpack tuple to get chain IDs
+        print("fetching chain balances...")
+        for chain_name, chain_id, chain_community_id in chains_tuple:
+            params = {
+                'id': wallet_address,
+                'chain_id': chain_id
+            }
+
+            # Call 
+            try:
+                response = requests.get(url, headers=self.headers, params=params)
+                data = response.json()
+
+                # Extract balances for only $1+ chains
+                usd_value = round(data.get('usd_value', 0), 4)
+                if usd_value > 1:
+                    chain_info = {
+                        'chain_id': chain_id,
+                        'chain_community_id': chain_community_id,
+                        'usd_balance': usd_value
+                    }
+                    chain_balances[chain_name] = chain_info
+
+            except requests.ConnectionError as e:
+                print(f"Error extracting chain balances for {chain_id}: {e}")
+                return None
+            
+        if dataframe:
+            # Convert nested dictionary into DataFrame
+            df = pd.DataFrame.from_dict(chain_balances, orient='index')
+            # Reset Index to make chain_name a column
+            df.reset_index(inplace=True)
+            # Rename cols
+            df.columns = ['chain_name', 'chain_id', 'chain_community_id', 'usd_balance']
+
+            return df
+    
+        return chain_balances
+    
+        
     
 if __name__ == "__main__":
     # Try to run fetch_wallets
-    print("\nATTEMPTING TO FETCH INTERACTED WALLETS")
     wallet_address = '0x42f50744fabf5e2873bba98234e78b11480fdee8'
     api = DebankAPI()
-    chains = api.fetch_interacted_chains(wallet_address)
-    print("Fetched chain IDs: ", chains)
+    chain_balances_df = api.fetch_chain_balances(wallet_address, dataframe=True)
+    print('\nCHAIN BALACES\n')
+    print(chain_balances_df.sort_values(by=))
+
+
 
 
             
