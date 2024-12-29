@@ -17,6 +17,10 @@ from pprint import pprint
 """
 TO DO
 - Test with different wallet addresses
+- Look at using /total_balance for getting chain balances
+- Add chain_name to cache
+- Fix issues with price retrieval
+- Add dataframe creation to fetch_token_balances
 """
 
 # Function execution timer
