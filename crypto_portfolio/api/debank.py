@@ -26,7 +26,7 @@ TO DO
 - Create cache for user token list 
     - After running fetch_token_list(), update cache with token id and chain id
     - Once cached use v1/token endpoint to try to access price
-    - Use 'is_verified' to filter out junk, update cache after doing so
+    - Use 'is_verified' to filter out junk, update cache after doing so```
 """
 
 # Function execution timer
