@@ -12,6 +12,7 @@ import numpy as np
 from functools import wraps
 # Pretty print for temp dev tooling
 from pprint import pprint
+import gc
 
 
 """
@@ -19,8 +20,13 @@ TO DO
 - Test with different wallet addresses
 - Look at using /total_balance for getting chain balances
 - Add chain_name to cache
+- Add chain_community_id to dictionary returned by fetch_token_balances
 - Fix issues with price retrieval
 - Add dataframe creation to fetch_token_balances
+- Create cache for user token list 
+    - After running fetch_token_list(), update cache with token id and chain id
+    - Once cached use v1/token endpoint to try to access price
+    - Use 'is_verified' to filter out junk, update cache after doing so
 """
 
 # Function execution timer
@@ -58,6 +64,15 @@ class DebankAPI:
             'AccessKey': self.api_key
         }
 
+    def clear_cache(self):
+        """
+        Clears the cached chain data (self.cached_chains) to free memory
+        Should be called when cache is no longer needed or before processing new data
+        """
+        self.cached_chains = None
+        gc.collect()
+
+
     @timing_decorator
     def fetch_interacted_chains(self, wallet_address, quiet=False):
         """
@@ -89,13 +104,14 @@ class DebankAPI:
 
                 # Cache chain_id and chain_community_id
                 if chain_id and chain_community_id:
-                    self.cached_chains = self.cached_chains or []
-                    self.cached_chains.append((chain_id, chain_community_id))
+                    self.cached_chains = self.cached_chains or set()
+                    self.cached_chains.add((chain_id, chain_community_id))
 
                 chains.append((chain_name, chain_id, chain_community_id))
 
+            del data
             return chains
-        
+
         except requests.ConnectionError as e:
             print(f"Error fetching interacted chains for {wallet_address}: {e}")
 
@@ -141,6 +157,9 @@ class DebankAPI:
                         'usd_balance': usd_value
                     }
                     chain_balances[chain_id] = chain_info
+                
+                # Del data after processing
+                del data
 
             except requests.ConnectionError as e:
                 print(f"Error extracting chain balances for {chain_id}: {e}")
@@ -153,9 +172,8 @@ class DebankAPI:
             df.reset_index(inplace=True)
             # Rename cols
             df.columns = ['chain_id', 'chain_name', 'chain_community_id', 'usd_balance']
-
             return df
-    
+
         return chain_balances
     
     # Helper method to get cached chain IDs
@@ -216,9 +234,17 @@ class DebankAPI:
                         'token_id': token.get('id', None),
                         'token_decimals': token.get('decimals', None),
                         'token_quantity': token.get('amount', 0),
+                        'token_price': token.get('price')
                     }
 
+                    # Debugging step to print out tokens with $0 price
+                    if info['token_price'] == 0:
+                        print(f"Zero price token: {info.values()}")
+
                     token_balances[chain_id].append(info)
+
+                # Del data after processing for current chain
+                del data
 
             except requests.ConnectionError as e:
                 print(f"Error retrieving token balance info for {chain_id}: {e}")
@@ -226,11 +252,6 @@ class DebankAPI:
 
         return token_balances
 
-        
-def temp_toDF(dict):
-    df = pd.DataFrame.from_dict(dict, orient="index")
-    df.reset_index(inplace=True)
-    return df
 
 
 if __name__ == "__main__":
@@ -243,7 +264,8 @@ if __name__ == "__main__":
     #print('\nCHAIN BALANCES DF\n')
     #print(temp_toDF(chain_balances))
     print('\nToken Balances\n')
-    pprint(api.fetch_token_balances(wallet_address))
+    pprint(api.fetch_token_balances(wallet_address, quiet=True))
+    api.clear_cache()
 
 
 
