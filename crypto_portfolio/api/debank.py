@@ -8,11 +8,12 @@ import json
 # Data
 import pandas as pd
 import numpy as np
-# Timing decorator
-from functools import wraps
 # Pretty print for temp dev tooling
 from pprint import pprint
 import gc
+#
+from ..config import Config
+from ..utils import timing_decorator
 
 
 """
@@ -28,21 +29,6 @@ Misc.
 - Test with different wallet addresses
 - Look at using /total_balance for getting chain balances
 """
-
-
-# Function execution timer
-def timing_decorator(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        # Check if quiet parameter exists and is False
-        if not kwargs.get('quiet', False):
-            print(f"{func.__name__}: {execution_time:.2f} seconds\n")
-        return result
-    return wrapper
 
 class DebankAPI:
     def __init__(self):
@@ -75,8 +61,8 @@ class DebankAPI:
         }
         """
         # Retrieve API key and define url/headers
-        self.api_key = os.getenv("DEBANK_KEY")
-        self.base_url = "https://pro-openapi.debank.com"
+        self.api_key = Config.DEBANK_API_KEY
+        self.base_url = Config.BASE_URL
         self.headers = {
             'accept': 'application/json',
             'AccessKey': self.api_key
@@ -296,11 +282,3 @@ if __name__ == "__main__":
     print('\nToken Balances\n')
     pprint(api.fetch_token_balances(wallet_address, quiet=True, dataframe=True))
     api.clear_cache()
-
-
-
-
-
-            
-
-

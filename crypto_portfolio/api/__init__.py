@@ -1,2 +1,2 @@
-from crypto_portfolio.api import debank as api
+from crypto_portfolio.api.debank import DebankAPI
 
