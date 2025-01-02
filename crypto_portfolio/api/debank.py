@@ -12,13 +12,14 @@ import numpy as np
 from pprint import pprint
 import gc
 #
-from ..config import Config
-from ..utils import timing_decorator
+from crypto_portfolio.config import Config
+from crypto_portfolio.utils import timing_decorator
 
 
 """
 Critical
-- Re-work cache to hold JSON object organized by chain_id + tokens 
+- Debug ValueError with Pandas Indexing in fetch_chain_balances
+- Better understand cache by printing out as processes run
 - Add chain_community_id to dictionary returned by fetch_token_balances
 - Fix issues with price retrieval (use /token)
 
@@ -84,10 +85,8 @@ class DebankAPI:
         Args:
             wallet_address (str): The wallet address to query.
         Returns:
-            list: A list of tuples [(chain_id, community_id, chain_name), ...] where 
-                chain_id is the abbreviated string name of the chain and 
-                commmunity_id is the chain's numeric representation
-                chain_name is the full name of chain
+            list: A list [chain_id,...] where 
+                chain_id is the abbreviated string name of the chain 
         """
         url = f"{self.base_url}/v1/user/used_chain_list"
         # Call parameters
@@ -133,10 +132,10 @@ class DebankAPI:
             wallet_address (str): user's wallet address.
         Returns:
             dictionary: a dictionary representing chain balances {chain_id: {chain_name, chain_community_id, $balance}}
-            DataFrame: a Pandas dataframe if dataframe=True with columns ['chain_id', 'chain_name', 'chain_community_id', 'usd_balance']
+            DataFrame: a Pandas dataframe if dataframe=True with columns ['chain_id', 'usd_balance']
          """
         url = f"{self.base_url}/v1/user/chain_balance"
-        # Get interacted chains (including chain names, so cache is not necessary here)
+        # Get interacted chains 
         if not self.cache:
             self.fetch_interacted_chains(wallet_address, quiet=True)
 
@@ -173,34 +172,21 @@ class DebankAPI:
                 return None
             
         if dataframe:
-            # Convert nested dictionary into DataFrame
-            df = pd.DataFrame.from_dict(chain_balances, orient='index')
-            # Reset Index to make chain_id a column
-            df.reset_index(inplace=True)
-            # Rename cols
-            df.columns = ['chain_id', 'chain_name', 'chain_community_id', 'usd_balance']
-            return df
+            if chain_balances:
+                # Convert nested dictionary into DataFrame
+                df = pd.DataFrame.from_dict(chain_balances, orient='index')
+                # Reset Index to make chain_id a column
+                df.reset_index(inplace=True)
+                # Rename cols
+                df.columns = ['chain_id', 'usd_balance']
+                return df
+            else:
+                print("Debug: chain balances is empty. Returning an empty DataFrame.")
+                return pd.DataFrame(columns=['chain_id', 'balance_usd'])
 
         return chain_balances
-    
-    # def fetch_token_balances
-    """
-    use /token endpoint + is_verified tag
-    """
-    
-    ## Helper method to get cached chain IDs
-    #def get_cached_ids(self, wallet_address):
-    #    """
-    #    Returns cached chain IDs or fetches them if not cached
-    #    Args:
-    #        wallet_address (str): User's wallet address
-    #    Returns:
-    #        list: List of chain IDs where total USD balance on chain > $1
-    #    """
-    #    if self.cached_chains is None:
-    #        # If not cached, run fetch_chain_balances to cache
-    #        self.fetch_interacted_chains(wallet_address, quiet=True)
-    #    return self.cached_chains
+
+
 
     @timing_decorator
     def fetch_token_balances(self, wallet_address, dataframe=False, quiet=False):
@@ -279,6 +265,6 @@ if __name__ == "__main__":
     #print(temp_toDF(chain_balances))
     #print('\nChain Balances\n')
     #pprint(api.fetch_chain_balances(wallet_address, quiet=True))
-    print('\nToken Balances\n')
-    pprint(api.fetch_token_balances(wallet_address, quiet=True, dataframe=True))
+    print("Chain Balances")
+    print(api.fetch_chain_balances(wallet_address, dataframe=True))
     api.clear_cache()
