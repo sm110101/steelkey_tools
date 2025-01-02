@@ -16,18 +16,19 @@ import gc
 
 
 """
-TO DO
+Critical
+- Re-work cache to hold JSON object organized by chain_id + tokens 
+- Add chain_community_id to dictionary returned by fetch_token_balances
+- Fix issues with price retrieval (use /token)
+
+Important
+- Add dataframe creation to fetch_token_balances
+
+Misc.
 - Test with different wallet addresses
 - Look at using /total_balance for getting chain balances
-- Add chain_name to cache
-- Add chain_community_id to dictionary returned by fetch_token_balances
-- Fix issues with price retrieval
-- Add dataframe creation to fetch_token_balances
-- Create cache for user token list 
-    - After running fetch_token_list(), update cache with token id and chain id
-    - Once cached use v1/token endpoint to try to access price
-    - Use 'is_verified' to filter out junk, update cache after doing so```
 """
+
 
 # Function execution timer
 def timing_decorator(func):
@@ -37,13 +38,11 @@ def timing_decorator(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-
         # Check if quiet parameter exists and is False
         if not kwargs.get('quiet', False):
             print(f"{func.__name__}: {execution_time:.2f} seconds\n")
         return result
     return wrapper
-
 
 class DebankAPI:
     def __init__(self):
@@ -55,7 +54,26 @@ class DebankAPI:
         load_dotenv()
 
         # Store cached chain ID and community ID
-        self.cached_chains = None
+        self.cache = {}
+        """
+        self.cache = {
+        'chain_id': {
+        'chain_name': chain_name,
+        'chain_community_id': chain_community_id,
+        'tokens': {
+            [token_id, token_id, ...]
+            
+            }
+        },
+        {'chain_id' : {
+        'chain_name': chain_name,
+        'chain_community_id': chain_community_id,
+        'tokens': {
+        
+            }
+        }
+        }
+        """
         # Retrieve API key and define url/headers
         self.api_key = os.getenv("DEBANK_KEY")
         self.base_url = "https://pro-openapi.debank.com"
@@ -69,12 +87,12 @@ class DebankAPI:
         Clears the cached chain data (self.cached_chains) to free memory
         Should be called when cache is no longer needed or before processing new data
         """
-        self.cached_chains = None
+        self.cache = {}
         gc.collect()
 
 
     @timing_decorator
-    def fetch_interacted_chains(self, wallet_address, quiet=False):
+    def fetch_interacted_chains(self, wallet_address, output=False, quiet=False):
         """
         Fetches list of blockchain networks that a wallet has interacted with.
         Args:
@@ -96,27 +114,31 @@ class DebankAPI:
             data = response.json()
 
             # Extract chain ID and community ID with validation
-            chains = []
             for chain in data:
-                chain_name = chain.get('name', None) # Default to None if not present
-                chain_id = chain.get('id', None) # Default to None if not present
-                chain_community_id = chain.get('community_id', None) # Default to None if not present
+                chain_name = chain.get('name') 
+                chain_id = chain.get('id') 
+                chain_community_id = chain.get('community_id') 
 
                 # Cache chain_id and chain_community_id
                 if chain_id and chain_community_id:
-                    self.cached_chains = self.cached_chains or set()
-                    self.cached_chains.add((chain_id, chain_community_id))
+                    if chain_id not in self.cache:
+                        self.cache[chain_id] = {
+                            'chain_name': chain_name,
+                            'chain_community_id': chain_community_id,
+                            'tokens': {}
+                        }
 
-                chains.append((chain_name, chain_id, chain_community_id))
+                chains = list(self.cache.keys())
 
             del data
-            return chains
+            if output:
+                return chains
 
         except requests.ConnectionError as e:
             print(f"Error fetching interacted chains for {wallet_address}: {e}")
+    
 
-            return []
-        
+    # def fetch_tokens & cache
     @timing_decorator
     def fetch_chain_balances(self, wallet_address, dataframe=False, quiet=False):
         """
@@ -129,7 +151,8 @@ class DebankAPI:
          """
         url = f"{self.base_url}/v1/user/chain_balance"
         # Get interacted chains (including chain names, so cache is not necessary here)
-        chains_tuple = self.fetch_interacted_chains(wallet_address)
+        if not self.cache:
+            self.fetch_interacted_chains(wallet_address, quiet=True)
 
         # Initialize empty dictionary to store balances
         chain_balances = {}
@@ -137,7 +160,7 @@ class DebankAPI:
         if not quiet:
             print("fetching chain balances...")
 
-        for chain_name, chain_id, chain_community_id in chains_tuple:
+        for chain_id in self.cache:
             params = {
                 'id': wallet_address,
                 'chain_id': chain_id
@@ -152,8 +175,6 @@ class DebankAPI:
                 usd_value = round(data.get('usd_value', 0), 4)
                 if usd_value > 1:
                     chain_info = {
-                        'chain_name': chain_name,
-                        'chain_community_id': chain_community_id,
                         'usd_balance': usd_value
                     }
                     chain_balances[chain_id] = chain_info
@@ -176,19 +197,24 @@ class DebankAPI:
 
         return chain_balances
     
-    # Helper method to get cached chain IDs
-    def get_cached_ids(self, wallet_address):
-        """
-        Returns cached chain IDs or fetches them if not cached
-        Args:
-            wallet_address (str): User's wallet address
-        Returns:
-            list: List of chain IDs where total USD balance on chain > $1
-        """
-        if self.cached_chains is None:
-            # If not cached, run fetch_chain_balances to cache
-            self.fetch_interacted_chains(wallet_address, quiet=True)
-        return self.cached_chains
+    # def fetch_token_balances
+    """
+    use /token endpoint + is_verified tag
+    """
+    
+    ## Helper method to get cached chain IDs
+    #def get_cached_ids(self, wallet_address):
+    #    """
+    #    Returns cached chain IDs or fetches them if not cached
+    #    Args:
+    #        wallet_address (str): User's wallet address
+    #    Returns:
+    #        list: List of chain IDs where total USD balance on chain > $1
+    #    """
+    #    if self.cached_chains is None:
+    #        # If not cached, run fetch_chain_balances to cache
+    #        self.fetch_interacted_chains(wallet_address, quiet=True)
+    #    return self.cached_chains
 
     @timing_decorator
     def fetch_token_balances(self, wallet_address, dataframe=False, quiet=False):
@@ -202,57 +228,59 @@ class DebankAPI:
         """
         url = f"{self.base_url}/v1/user/token_list"
         # Get interacted chains from cache
-        id_and_cid = self.get_cached_ids(wallet_address)
+        if not self.cache:
+            self.fetch_interacted_chains(wallet_address, quiet=True)
 
-        # Initialize dictionary to store token balances
-        token_balances = {}
-
-        # unpack tuple to get chain_id call paramter
-        for chain_id, chain_community_id in id_and_cid:
-            # Initialize empty list for this chan 
-            token_balances[chain_id] = []
-            # Define call parameters
+        for chain_id in self.cache:
             params = {
                 'id': wallet_address,
                 'chain_id': chain_id
             }
-            
-            # Print chain_id for each run 
-            if not quiet:
-                print(f"fetching {chain_id} balances...")
 
-            # Call
             try:
+                if not quiet:
+                    print(f"Fetching tokens for chain {chain_id}...")
+
+                # Call
                 response = requests.get(url, headers=self.headers, params=params)
                 data = response.json()
 
-                # Gather relevant info
+                # Gather token info (excluding price)
                 for token in data:
-                    # Attach info to subdictionary
-                    info = {
-                        'token_name': token.get('name', None),
-                        'token_id': token.get('id', None),
-                        'token_decimals': token.get('decimals', None),
-                        'token_quantity': token.get('amount', 0),
-                        'token_price': token.get('price')
-                    }
+                    is_core = token['is_core']
+                    if is_core:
+                        token_id = token['id']
+                        token_info = {
+                            'token_name': token.get('name'),
+                            'token_id': token_id,
+                            'token_quantity': token.get('amount'),
+                            'token_price': token.get('price')
+                        }
+                        
+                        self.cache[chain_id]['tokens'][token_id] = token_info
 
-                    # Debugging step to print out tokens with $0 price
-                    if info['token_price'] == 0:
-                        print(f"Zero price token: {info.values()}")
-
-                    token_balances[chain_id].append(info)
-
-                # Del data after processing for current chain
                 del data
 
             except requests.ConnectionError as e:
-                print(f"Error retrieving token balance info for {chain_id}: {e}")
+                print(f"Error fetching tokens for chain {chain_id}: {e}")
                 return None
-
-        return token_balances
-
-
+            
+        if dataframe:
+            records = []
+            for chain_id, chain_data in self.cache.items():
+                for token_id, token_data in chain_data['tokens'].items():
+                    records.append({
+                        'chain_id': chain_id,
+                        'chain_name': chain_data['chain_name'],
+                        'chain_community_id': chain_data['chain_community_id'],
+                        **token_data
+                    })
+            
+            df = pd.DataFrame(records)
+            df['balance'] = df['token_quantity'] * df['token_price']
+            return df
+        
+        return self.cache
 
 if __name__ == "__main__":
     # Try to run fetch_wallets
@@ -263,9 +291,12 @@ if __name__ == "__main__":
     #pprint(chain_balances)
     #print('\nCHAIN BALANCES DF\n')
     #print(temp_toDF(chain_balances))
+    #print('\nChain Balances\n')
+    #pprint(api.fetch_chain_balances(wallet_address, quiet=True))
     print('\nToken Balances\n')
-    pprint(api.fetch_token_balances(wallet_address, quiet=True))
+    pprint(api.fetch_token_balances(wallet_address, quiet=True, dataframe=True))
     api.clear_cache()
+
 
 
 
