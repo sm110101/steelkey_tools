@@ -15,3 +15,6 @@ def timing_decorator(func):
             print(f"{func.__name__} executed in {execution_time:.2f} seconds")
         return result
     return wrapper
+
+
+    
