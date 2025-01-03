@@ -62,7 +62,7 @@ api = DebankAPI()
 load_doenv()
 
 # Define wallet address
-wallet_address os.getenv("STEELKEY_WALLET")
+wallet = os.getenv("STEELKEY_WALLET")
 
 # Get interacted chains
 chains = api.fetch_interacted_chains(wallet, output=True) # output parameter is required for this function since it is mostly used to update cached data for other calls
