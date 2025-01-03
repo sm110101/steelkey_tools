@@ -177,7 +177,6 @@ class DebankAPI:
                 df = pd.DataFrame.from_dict(chain_balances, orient='index')
                 # Reset Index to make chain_id a column
                 df.reset_index(inplace=True)
-                # Rename cols
                 df.columns = ['chain_id', 'usd_balance']
                 return df
             else:
@@ -249,7 +248,7 @@ class DebankAPI:
                     })
             
             df = pd.DataFrame(records)
-            df['balance'] = df['token_quantity'] * df['token_price']
+            df['usd_balance'] = df['token_quantity'] * df['token_price']
             return df
         
         return self.cache

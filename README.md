@@ -66,7 +66,7 @@ chains = api.fetch_interacted_chains(wallet, output=True) # output parameter is 
 print("Interacted chains: ", chains)
 ```
 
-**Output Example
+**Output Example**
 
 ```plaintext
 Interacted Chains:  ['op', 'arb', 'bsc', 'btt', 'eth', 'ftm', 'pls', 'base', 'celo', 'fuse', 'xdai', 'blast', 'matic']
@@ -81,13 +81,13 @@ print(chains_df.head())
 **Output Example**
 
 ```plaintext
-  chain_id chain_name  chain_community_id         token_name                                    token_id  token_quantity  token_price    balance
-0      arb   Arbitrum               42161           Balancer  0x040d1edc9569d4bab2d15287dc5a4f10f56a56b8        0.052954     2.635303   0.139550
-1      arb   Arbitrum               42161        Black Agnus  0x306fd3e7b169aa4ee19412323e1a5995b8c1a1f4    30000.000000     0.000000   0.000000
-2      arb   Arbitrum               42161            Radiant  0x3082cc23568ea640225c2467653db90e9250aaa0        2.295921     0.060921   0.139870
-3      arb   Arbitrum               42161      Camelot token  0x3d9907f9a368ad0a51be60f7da3b97cf940982d8        0.001778   916.182213   1.629036
-4      arb   Arbitrum               42161  Equilibria Pendle  0x3eabe18eae267d1b57f917aba085bb5906114600       33.710085     1.642202  55.358772
+ chain_id  usd_balance
+0   arb  263158.9849
+1   bsc   74565.8739
+2   eth     827.9458
+3  base     244.4903
 ```
+
 
 ```python
 # Fetch token balances by chain as a DataFrame
@@ -96,5 +96,13 @@ print(tokens_df.head())
 ```
 **Output Example**
 
+```plaintext
+  chain_id chain_name  chain_community_id         token_name                                    token_id  token_quantity  token_price    balance
+0      arb   Arbitrum               42161           Balancer  0x040d1edc9569d4bab2d15287dc5a4f10f56a56b8        0.052954     2.635303   0.139550
+1      arb   Arbitrum               42161        Black Agnus  0x306fd3e7b169aa4ee19412323e1a5995b8c1a1f4    30000.000000     0.000000   0.000000
+2      arb   Arbitrum               42161            Radiant  0x3082cc23568ea640225c2467653db90e9250aaa0        2.295921     0.060921   0.139870
+3      arb   Arbitrum               42161      Camelot token  0x3d9907f9a368ad0a51be60f7da3b97cf940982d8        0.001778   916.182213   1.629036
+4      arb   Arbitrum               42161  Equilibria Pendle  0x3eabe18eae267d1b57f917aba085bb5906114600       33.710085     1.642202  55.358772
+```
 
 
