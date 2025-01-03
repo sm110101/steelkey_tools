@@ -54,12 +54,15 @@ DEBANK_KEY="your_api_key_here"
 
 ```python
 from crypto_portfolio.api.debank import DebankAPI
+from dotenv import load_dotenv
+import os
 
-# Initialize API
+# Initialize API & env
 api = DebankAPI()
+load_doenv()
 
 # Define wallet address
-wallet_address = "0xbb140caad2a312dcb2d1eaec02bb11b35816d39d"
+wallet_address os.getenv("STEELKEY_WALLET")
 
 # Get interacted chains
 chains = api.fetch_interacted_chains(wallet, output=True) # output parameter is required for this function since it is mostly used to update cached data for other calls

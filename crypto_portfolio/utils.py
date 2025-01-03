@@ -7,13 +7,20 @@ def timing_decorator(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # Check if "quiet" is True
+        if kwargs.get("quiet", False):
+            # Call without timing
+            return func(*args, **kwargs)
+        
+        #Measure execution time
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        if not kwargs.get("quiet", False):
-            print(f"{func.__name__} executed in {execution_time:.2f} seconds")
+        # Print Execution time
+        print(f"{func.__name__} executed in {execution_time:.2f} seconds")
         return result
+    
     return wrapper
 
 

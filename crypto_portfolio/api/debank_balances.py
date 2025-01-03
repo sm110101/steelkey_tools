@@ -1,25 +1,20 @@
-# Key Storage
 import requests
 import json
-# Data
 import pandas as pd
 import numpy as np
 # Pretty print for temp dev tooling
 from pprint import pprint
-# Garbage collection for cache clearing
 import gc
-#
 from crypto_portfolio.config import Config
 from crypto_portfolio.utils import timing_decorator
 
 
-class DebankAPI:
+class DebankBalances:
     def __init__(self):
         """
         Initialize DebankAPI instance
         API key retrieved from environment variables
         """
-
         # Store cached wallet chain_ids and token_ids
         self.cache = {}
 
@@ -56,7 +51,7 @@ class DebankAPI:
         params = {'id': wallet_address}
         # Call API
         try:
-            if not quiet:
+            if quiet==False:
                 print('fetching interacted chains...')
             response = requests.get(url, headers=self.headers, params=params)
             data = response.json()
@@ -100,12 +95,12 @@ class DebankAPI:
         url = f"{self.base_url}/v1/user/chain_balance"
         # Get interacted chains 
         if not self.cache:
-            self.fetch_interacted_chains(wallet_address)
+            self.fetch_interacted_chains(wallet_address, quiet=True)
 
         # Initialize empty dictionary to store balances
         chain_balances = {}
         # unpack tuple to get chain IDs
-        if not quiet:
+        if quiet==False:
             print("fetching chain balances...")
 
         for chain_id in self.cache:
@@ -172,7 +167,7 @@ class DebankAPI:
             }
 
             try:
-                if not quiet:
+                if quiet==False:
                     print(f"Fetching tokens for chain {chain_id}...")
 
                 # Call
@@ -215,29 +210,33 @@ class DebankAPI:
             return df
         
         return self.cache
+    
+
 
 if __name__ == "__main__":
     # Try to run fetch_wallets
     wallet_address = '0xbb140caad2a312dcb2d1eaec02bb11b35816d39d'
     api = DebankAPI()
     #chain_balances = api.fetch_chain_balances(wallet_address)
+    print(api.fetch_token_balances(wallet_address, dataframe=True, quiet=True))
 
-    print("Fetching Interacted Chains...")
-    api.fetch_interacted_chains(wallet_address, quiet=False)
-    print("Cache after fetching interacted chains\n")
-    pprint(api.cache)
-
-    print("Fetching Chain Balances...")
-    api.fetch_chain_balances(wallet_address, quiet=True)
-    print("cache after fetching chain balances\n")
-    pprint(api.cache)
-
-    print("Fetching token balances")
-    api.fetch_token_balances(wallet_address, quiet=True)
-    print("cache after fetching token balances\n")
-    pprint(api.cache)
-
-    print("Clearing Cache")
-    api.clear_cache()
-    print("Cache after clearing\n")
-    pprint(api.cache)
+    #print("Fetching Interacted Chains...")
+    #api.fetch_interacted_chains(wallet_address, quiet=False)
+    #print("Cache after fetching interacted chains\n")
+    #pprint(api.cache)
+#
+    #print("Fetching Chain Balances...")
+    #api.fetch_chain_balances(wallet_address, quiet=True)
+    #print("cache after fetching chain balances\n")
+    #pprint(api.cache)
+#
+    #print("Fetching token balances")
+    #api.fetch_token_balances(wallet_address, quiet=True)
+    #print("cache after fetching token balances\n")
+    #pprint(api.cache)
+#
+    #print("Clearing Cache")
+    #api.clear_cache()
+    #print("Cache after clearing\n")
+    #pprint(api.cache)
+#
