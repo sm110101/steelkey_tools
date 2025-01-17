@@ -211,6 +211,10 @@ class DebankBalances:
         
         return self.cache
     
+    @timing_decorator
+    def fetch_interacted_protocols(self, wallet_address, dataframe=False, quiet=True)
+
+    
 
 
 if __name__ == "__main__":
