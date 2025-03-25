@@ -59,7 +59,7 @@ import os
 
 # Initialize API & env
 api = DebankAPI()
-load_doenv()
+load_dotenv()
 
 # Define wallet address
 wallet = os.getenv("STEELKEY_WALLET")

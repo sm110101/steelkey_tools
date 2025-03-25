@@ -220,7 +220,7 @@ class DebankBalances:
 if __name__ == "__main__":
     # Try to run fetch_wallets
     wallet_address = '0xbb140caad2a312dcb2d1eaec02bb11b35816d39d'
-    api = DebankAPI()
+    api = DebankBalances()
     #chain_balances = api.fetch_chain_balances(wallet_address)
     print(api.fetch_token_balances(wallet_address, dataframe=True, quiet=True))
 
